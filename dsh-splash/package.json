@@ -1,0 +1,43 @@
+{
+  "name": "dsh-splash",
+  "version": "1.1.0",
+  "description": "DeepSeek Harness 启动画面：亮白跑马灯 → 一笔写出 DeepSeek Harness。运行时注入，不改宿主文件，随升级存活 · Launch splash for DSH: marquee lights up, then the wordmark is written stroke by stroke.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "splash",
+    "splash-screen",
+    "startup",
+    "boot-animation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/www02310/dsh-go.git"
+  },
+  "bugs": {
+    "url": "https://github.com/www02310/dsh-go/issues"
+  },
+  "homepage": "https://github.com/www02310/dsh-go#readme",
+  "files": [
+    "lib",
+    "assets",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node tools/build-overlay.mjs",
+    "check": "node tools/build-overlay.mjs && node --check lib/index.js && node --check assets/splash-overlay.js"
+  }
+}

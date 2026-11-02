@@ -1,0 +1,18 @@
+# 批处理文件必须保持 CRLF（Windows cmd.exe 对 LF 行尾的 .cmd 会解析异常）
+*.cmd -text
+# PowerShell 脚本检出为 CRLF（PS 5.1 对两种都兼容，统一成 Windows 习惯）
+*.ps1 text eol=crlf
+
+# 其余源码/文档统一 LF，避免 Windows 检出后把生成物改成 CRLF
+*.mjs text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.svg text eol=lf
+*.txt text eol=lf
+
+*.png binary
+*.tgz binary
+*.zip binary

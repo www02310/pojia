@@ -1,0 +1,18 @@
+# ============================================================================
+# dsh-splash —— DSH bundle patch
+# ============================================================================
+# 插件的挂载声明。DSH 启动时按 bundle 层栈叠加各插件 patch，本文件把
+# dsh-splash 插进当前 profile 的配置树。
+#
+# 安装：
+#   dsh plugin --profile desktop add dsh-splash
+# 或本地目录安装（开发调试）：
+#   dsh plugin --profile desktop add link:D:\path\to\dsh-splash-plugin
+#
+# 插件不改动宿主任何文件：启动画面由 webServer 的 index-inject 在渲染页
+# 最早阶段注入一层覆盖层，演完自行淡出销毁。
+# ============================================================================
+
+- insert:
+    - id: dsh-splash
+      name: dsh-splash

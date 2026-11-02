@@ -51,45 +51,64 @@ resources\runtime\primary-runtime\dependencies\node
 
 ---
 
-## 2. 放插件源码
+## 2. 装插件（dsh-purge + dsh-splash，一次装齐）
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.dsh\plugins" | Out-Null
-Copy-Item -Recurse -Force "<repo>\dsh-purge" "$env:USERPROFILE\.dsh\plugins\dsh-purge"
+cd <repo>\scripts
+.\2-deploy-plugins.ps1
 ```
 
-文件夹名必须是 `dsh-purge`，里面 `package.json` 的 `"name"` 也必须是 `dsh-purge`。
+脚本做四件事，全部幂等：
 
----
+1. 把 `dsh-purge/` 和 `dsh-splash/` 复制到 `%USERPROFILE%\.dsh\plugins\`
+2. 往 `profiles\desktop\package.json` 的 `dependencies` 加两条 `file:../../plugins/xxx`
+3. 往 `dsh.profile.bundles` 末尾追加 `dsh-splash`、`dsh-purge`（已有的插件条目不动）
+4. 用宿主自带的 pnpm 跑 `install`
 
-## 3. 配置 profile
+改 `package.json` 前会自动备份成 `package.json.bak-deploy-<时间戳>`。
 
-编辑 `%USERPROFILE%\.dsh\profiles\desktop\package.json`，参照 `profile/desktop-package.json`。
+**两个插件一起装是默认行为。** 只想装其中一个，跑完从 `bundles` 里删掉对应那行即可。
 
-两处要改：
+> `dsh-splash` 用**插件形态**（运行时往 index.html 注入覆盖层，不改宿主文件）。
+> 仓库里它的 `native/` 目录是改 asar 的原生版，别和插件版同时用，否则会出现两个启动画面。
 
-**a) `dependencies` 里加**：
+### 手动等价步骤
 
-```json
-"dsh-purge": "file:../../plugins/dsh-purge"
+不跑脚本的话：
+
+```powershell
+$plugins = "$env:USERPROFILE\.dsh\plugins"
+New-Item -ItemType Directory -Force -Path $plugins | Out-Null
+Copy-Item -Recurse -Force "<repo>\dsh-purge"  "$plugins\dsh-purge"
+Copy-Item -Recurse -Force "<repo>\dsh-splash" "$plugins\dsh-splash"
 ```
 
-**b) `dsh.profile.bundles` 末尾加**：
+文件夹名必须和 `package.json` 里的 `name` 一致（`dsh-purge` / `dsh-splash`）。
+
+然后编辑 `%USERPROFILE%\.dsh\profiles\desktop\package.json`，参照 `profile/desktop-package.json`：
+
+**a) `dependencies` 加两条**：
 
 ```json
+"dsh-purge":  "file:../../plugins/dsh-purge",
+"dsh-splash": "file:../../plugins/dsh-splash"
+```
+
+**b) `dsh.profile.bundles` 末尾加**（splash 在 purge 前面，它要早注入）：
+
+```json
+"dsh-splash",
 "dsh-purge"
 ```
 
-注意：
+注意事项：
 
-- 用相对路径 `file:../../plugins/dsh-purge`，别写绝对路径
+- 用相对路径 `file:../../plugins/xxx`，别写绝对路径
 - 别重复添加
 - `@deepseek-ai/dsh-base` 和 `@deepseek-ai/dsh-web-app` 必须在最前面，别动
-- 改之前先备份：`Copy-Item package.json package.json.bak`
+- 改之前先备份
 
----
-
-## 4. 装依赖
+最后装依赖：
 
 ```powershell
 cd "$env:USERPROFILE\.dsh\profiles\desktop"
@@ -97,13 +116,13 @@ $pnpm = "$env:USERPROFILE\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnp
 node $pnpm install
 ```
 
-成功标志：`node_modules\dsh-purge\package.json` 存在。
+成功标志：`node_modules\dsh-purge\package.json` 和 `node_modules\dsh-splash\package.json` 都在。
 
 `ERR_PNPM_IGNORED_BUILDS` 警告可以忽略，不影响加载。
 
 ---
 
-## 5. 打补丁（命令行，**不要走 UI**）
+## 3. 打补丁（命令行，**不要走 UI**）
 
 **关键：不要点界面里的「应用」。**
 
@@ -112,9 +131,19 @@ node $pnpm install
 界面就显示「读取失败: timeout」然后卡在「处理中…」。补丁其实在跑，但前端收不到响应，
 后续的「重启 + 换包」两个动作**不会触发**，你会以为失败了。
 
-走命令行，全程可控：
+**最省事的方式**（脚本会自动完成 3.1 + 3.2）：
 
-### 5.1 先解包 asar
+```powershell
+.\3-apply-patches.ps1
+```
+
+它会检测 `resources\app` 是否已解包，没有就解包，然后跑 CLI `--apply`，最后打印补丁统计。
+
+下面是手动等价步骤。
+
+---
+
+### 3.1 先解包 asar
 
 CLI 在 asar 打包的宿主上找不到 `@deepseek-ai` 目录，必须先解开：
 
@@ -134,7 +163,7 @@ console.log("unpacked:", JSON.stringify(m.overlayAsarUnpacked(asar, dest)));
 
 结果应该是 **18309 个文件 / 约 449MB**。
 
-### 5.2 应用补丁
+### 3.2 应用补丁
 
 ```powershell
 cd "$env:USERPROFILE\.dsh\profiles\desktop"
@@ -154,7 +183,7 @@ node node_modules/dsh-purge/bin/dsh-purge.js --apply
 
 ---
 
-## 6. 换包（必需）
+## 4. 换包（必需）
 
 Electron 的加载顺序是 **`app.asar` 优先于 `app` 目录**。补丁写在 `resources\app` 里，
 不把 `app.asar` 挪走，补丁一条都不生效。
@@ -163,7 +192,7 @@ Electron 的加载顺序是 **`app.asar` 优先于 `app` 目录**。补丁写在
 
 ```powershell
 cd <repo>\scripts
-.\2-finish-asar-swap.ps1
+.\4-finish-asar-swap.ps1
 ```
 
 脚本会等进程退干净 → 把 `app.asar` 改名成 `app.asar.bak` → 清 `rename-pending` 锁 →
@@ -181,7 +210,7 @@ Remove-Item -LiteralPath "$r\app.asar.rename-pending" -Force -ErrorAction Silent
 
 ---
 
-## 7. 验证
+## 5. 验证
 
 启动后：
 
@@ -232,11 +261,24 @@ rc.5 写过的会话在 rc.2 上可能读不出或空白。降级前备份 `~\.d
 这个包是 rc.3 才引入的。skills-manager、codex-ui 的 `peerDependencies` 里都写了它，
 但**代码里并不 import**，所以 rc.2 上只是 pnpm 报 peer 警告，不影响加载。
 
-### dsh-splash 不是插件
+### dsh-splash 有两种形态，别混用
 
-`dsh-splash` 是直接改 `resources\app.asar` 里 `lib\main.js` 的启动画面补丁工具
-（`apply-splash.mjs`），没有 `package.json`，**不应该**作为 bundle 写进 profile。
-写了就是坏链，宿主每次启动都会尝试加载失败。
+这个项目（GitHub 仓库名 `www02310/dsh-go`，里面 `package.json` 的 name 是 `dsh-splash`）
+有两套实现：
 
-要用启动画面的话，注意它改的是 asar，而打完 dsh-purge 后宿主走的是 `resources\app`
-目录模式，得改成改 `resources\app\lib\main.js` 才行。
+| 形态 | 文件 | 原理 | 本仓库用不用 |
+|---|---|---|---|
+| **插件版** | `lib/index.js` + `assets/splash-overlay.js` | 运行时通过 webServer 的 `webserver/index-inject` 往 index.html 注入覆盖层，**不改宿主任何文件** | ✅ 用这个 |
+| 原生版 | `native/apply-splash.mjs` | 直接改 `resources\app.asar` 里的 `lib/main.js` | ❌ 不用 |
+
+**必须用插件版**，原因：
+
+1. 打完 dsh-purge 后宿主走的是 `resources\app` 目录模式，`app.asar` 已被改名成 `.bak`。
+   原生版改的是 asar，改了也不生效。
+2. 两者同时存在会**出现两个启动画面**——原生版在宿主层开窗，插件版再注入一层覆盖层。
+3. 插件版的 `detectNativeSplash()` 会检测 `resources\app.asar` 里有没有原生补丁，
+   有就自动让位（`skipIfNative: true`）。但由于 asar 已被改名，它检测不到，
+   所以千万不要再去跑 `native/install.ps1`。
+
+另外常见的一个坑：profile 里写成 `link:D:\path\to\dsh-splash-plugin` 但那个目录不存在，
+就是坏链，宿主会静默忽略，启动画面永远不会出现。用 `2-deploy-plugins.ps1` 装就没有这个问题。

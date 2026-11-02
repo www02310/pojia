@@ -39,16 +39,31 @@ pojia/
 ├── installer/
 │   └── deepseek-harness-0.2.1-rc.2-win-x64.exe   # 官方安装包 289MB（Git LFS）
 ├── dsh-purge/                 # 【推荐】插件源码 v1.1.88（fork 自 YuJunZhiXue/dsh-purge，MIT）
+├── dsh-splash/                # 启动画面插件 v1.1.0（github.com/www02310/dsh-go）
 ├── versions/
 │   └── dsh-purge-1.1.71/      # 【备选】插件源码 v1.1.71，同款目录结构，可单独下载
 ├── profile/
 │   └── desktop-package.json   # 实测可用的 profile 配置（插件版本 + bundle 顺序）
 ├── scripts/
 │   ├── 1-extract-installer.ps1   # 从安装包提取程序文件并部署
-│   └── 2-finish-asar-swap.ps1    # 打完补丁后换 asar（必需，否则补丁不生效）
+│   ├── 2-deploy-plugins.ps1      # 一次装齐两个插件 + 改 profile + pnpm install
+│   ├── 3-apply-patches.ps1       # 解包 asar + 命令行打补丁（避开 UI 超时）
+│   └── 4-finish-asar-swap.ps1    # 换包（必需，否则补丁不生效）
 └── docs/
     └── SETUP.md               # 完整安装步骤 + 踩坑记录
 ```
+
+### 装机时两个插件一起装
+
+`2-deploy-plugins.ps1` 默认**同时部署 dsh-purge 和 dsh-splash**，不需要额外操作。
+它会复制源码到 `%USERPROFILE%\.dsh\plugins\`、往 profile 注册依赖与 bundle、再跑 `pnpm install`，
+并且保留你 profile 里原有的其他插件。重复执行是安全的（幂等）。
+
+只想装其中一个的话，跑完脚本后从 profile 的 `bundles` 里删掉对应那行即可。
+
+**dsh-splash 用的是插件形态**（`lib/index.js` 运行时往 index.html 注入覆盖层），
+不改宿主文件，所以换包、宿主升级都不受影响。仓库里的 `dsh-splash/native/` 是改 asar 的原生版，
+**不要和插件版同时用**——那会导致两个启动画面。当前安装流程只用插件版。
 
 ### 两个插件版本怎么选
 
@@ -72,15 +87,22 @@ Ctrl+Enter 插话。所以除非有明确理由，否则别降级。
 
 ## 快速开始
 
-完整步骤见 **[docs/SETUP.md](docs/SETUP.md)**，摘要：
+完整步骤见 **[docs/SETUP.md](docs/SETUP.md)**，四步脚本：
 
-1. 装 DSH 0.2.1-rc.2（用 `installer/` 里的 exe，或用 `scripts/1-extract-installer.ps1` 无交互部署）
-2. 把 `dsh-purge/` 放到 `%USERPROFILE%\.dsh\plugins\dsh-purge`
-3. 按 `profile/desktop-package.json` 改 `%USERPROFILE%\.dsh\profiles\desktop\package.json`
-4. `pnpm install`
-5. 命令行打补丁（**不要走 UI**，会超时）
-6. 退出宿主 → 跑 `scripts/2-finish-asar-swap.ps1` 换包
-7. 启动，新开会话
+```powershell
+cd scripts
+
+.\1-extract-installer.ps1     # 部署 DSH 0.2.1-rc.2（已装过就跳过）
+.\2-deploy-plugins.ps1        # 装 dsh-purge + dsh-splash，改 profile，pnpm install
+.\3-apply-patches.ps1         # 解包 asar + 命令行打补丁
+# 然后完全退出宿主（托盘 Quit）
+.\4-finish-asar-swap.ps1      # 换包，补丁才生效
+```
+
+装完启动，新开一个会话。
+
+`2-deploy-plugins.ps1` 会**同时装两个插件**，这就是本仓库的默认组合：
+dsh-purge（破甲/清洗）+ dsh-splash（启动画面）。
 
 ---
 

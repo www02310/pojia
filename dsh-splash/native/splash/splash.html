@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DeepSeek Harness</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --white: #ffffff;
+    --dim: #8b93a7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+    user-select: none;
+    cursor: default;
+  }
+  body::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(700px 460px at 50% 30%, rgba(255,255,255,0.055), transparent 70%),
+      radial-gradient(900px 620px at 50% 112%, rgba(77,107,254,0.08), transparent 65%);
+    pointer-events: none;
+  }
+  .stage {
+    position: relative;
+    height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 22px;
+    animation: rise 0.4s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ── 亮白跑马灯 ── */
+  .marquee {
+    position: relative;
+    width: 300px; height: 26px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: opacity 0.35s ease;
+  }
+  .marquee.dim { opacity: 0.18; }
+  .marquee .track {
+    position: absolute; left: 6px; right: 6px; top: 50%;
+    height: 1px; transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+  }
+  .marquee i {
+    position: relative;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 6px 1px rgba(255,255,255,0.85);
+    opacity: 0.16;
+    animation: chase 1.05s linear infinite;
+  }
+  @keyframes chase {
+    0%   { opacity: 0.14; box-shadow: 0 0 4px 0 rgba(255,255,255,0.35); }
+    22%  { opacity: 1;    box-shadow: 0 0 9px 2.5px rgba(255,255,255,0.95); }
+    55%  { opacity: 0.14; box-shadow: 0 0 4px 0 rgba(255,255,255,0.35); }
+    100% { opacity: 0.14; box-shadow: 0 0 4px 0 rgba(255,255,255,0.35); }
+  }
+  .marquee .beam {
+    position: absolute; top: 50%; left: 0;
+    width: 90px; height: 14px;
+    transform: translateY(-50%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    filter: blur(5px);
+    animation: sweep 0.42s ease-in-out 3;
+  }
+  @keyframes sweep {
+    from { transform: translate(-90px, -50%); }
+    to   { transform: translate(300px, -50%); }
+  }
+
+  /* ── 一笔写出 ── */
+  .write { width: 380px; height: 66px; display: block; }
+  .write .glow path {
+    fill: none;
+    stroke: rgba(255,255,255,0.9);
+    stroke-width: 6;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: blur(6px);
+    opacity: 0.5;
+  }
+  .write .ink path {
+    fill: #fff;
+    fill-opacity: 0;
+    stroke: #fff;
+    stroke-width: 2.4;
+    stroke-linecap: round; stroke-linejoin: round;
+    transition: fill-opacity 0.3s ease 0.06s;
+  }
+  .write .ink path.done { fill-opacity: 0.94; }
+  .write .pen-halo { fill: rgba(255,255,255,0.32); filter: blur(2.5px); opacity: 0; }
+  .write .pen { fill: #fff; opacity: 0; }
+  .underline {
+    width: 0; height: 2px; margin-top: -8px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    box-shadow: 0 0 8px rgba(255,255,255,0.8);
+    transition: width 0.5s cubic-bezier(0.22,0.9,0.3,1);
+  }
+  .underline.on { width: 300px; }
+
+  /* ── 尾部 ── */
+  .logo {
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #171b26, #101320);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 10px 30px -12px rgba(77,107,254,0.5);
+    opacity: 0;
+    transition: opacity 0.45s ease;
+  }
+  .logo.on { opacity: 1; }
+  .logo img { width: 22px; height: 22px; display: block; }
+  .bar {
+    width: 168px; height: 3px; border-radius: 99px;
+    background: rgba(255,255,255,0.09);
+    overflow: hidden;
+  }
+  .bar::after {
+    content: "";
+    display: block; width: 42%; height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    animation: slide 1.25s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(250%); }
+  }
+  .status { font-size: 12px; color: var(--dim); letter-spacing: 0.08em; }
+  .version {
+    position: absolute; bottom: 18px;
+    font-size: 11px; color: rgba(139,147,167,0.55);
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="marquee" id="marquee">
+      <div class="track"></div>
+      <div class="beam"></div>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+
+    <svg class="write" id="write" viewBox="-10 -45 400 62" aria-label="DeepSeek Harness">
+      <g class="glow" id="glow"></g>
+      <g class="ink" id="ink"></g>
+      <g class="pens" id="pens"></g>
+    </svg>
+    <div class="underline" id="underline"></div>
+
+    <div class="logo" id="logo"><img src="logo.svg" alt=""></div>
+    <div class="bar"></div>
+    <div class="status">正在启动…</div>
+    <div class="version" id="ver"></div>
+  </div>
+
+<script>
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var GLYPHS = [{"d":"M438 158Q377 104 312.5 56.0Q248 8 205 -12Q202 -23 196.0 -28.5Q190 -34 178 -34Q169 -34 165.0 -30.5Q161 -27 161 -18Q161 -12 165.5 32.0Q170 76 170 135Q170 235 167 316Q165 410 165 448Q165 507 177 545Q186 569 209 569Q217 569 223.5 566.0Q230 563 230 557Q229 552 219.5 522.0Q210 492 210 465Q210 390 213 301Q215 187 215 143Q215 68 214 53Q250 67 311.5 111.0Q373 155 415 191Q502 269 542.0 331.0Q582 393 582 460Q582 541 480.5 571.0Q379 601 215 601Q165 601 81 589Q65 588 31 579Q16 574 10 574Q2 574 -5.5 587.0Q-13 600 -13 613Q-13 618 -6.0 622.5Q1 627 16 629Q76 637 118.5 641.0Q161 645 218 645Q400 645 514.5 604.0Q629 563 629 465Q629 387 584.0 317.0Q539 247 438 158Z","tx":0,"sx":7.85,"sy":1.66,"s":0.0488},{"d":"M436 240Q436 222 409.5 161.0Q383 100 329.5 48.0Q276 -4 198 -4Q134 -4 91.0 36.0Q48 76 48 159Q48 237 84.0 313.5Q120 390 178.0 438.5Q236 487 298 487Q335 487 360.5 470.5Q386 454 386 423Q386 388 346.5 355.0Q307 322 244.0 297.0Q181 272 114 261Q102 215 102 171Q102 113 129.5 81.0Q157 49 208 49Q285 49 333.0 104.0Q381 159 413 228Q415 232 420.0 243.5Q425 255 429 255Q436 255 436 240ZM286 446Q248 446 213.0 421.0Q178 396 154.5 361.0Q131 326 124 299Q170 304 221.0 325.0Q272 346 306.5 371.0Q341 396 341 412Q341 428 324.5 437.0Q308 446 286 446Z","tx":31.89,"sx":39.74,"sy":1.66,"s":0.0488},{"d":"M436 240Q436 222 409.5 161.0Q383 100 329.5 48.0Q276 -4 198 -4Q134 -4 91.0 36.0Q48 76 48 159Q48 237 84.0 313.5Q120 390 178.0 438.5Q236 487 298 487Q335 487 360.5 470.5Q386 454 386 423Q386 388 346.5 355.0Q307 322 244.0 297.0Q181 272 114 261Q102 215 102 171Q102 113 129.5 81.0Q157 49 208 49Q285 49 333.0 104.0Q381 159 413 228Q415 232 420.0 243.5Q425 255 429 255Q436 255 436 240ZM286 446Q248 446 213.0 421.0Q178 396 154.5 361.0Q131 326 124 299Q170 304 221.0 325.0Q272 346 306.5 371.0Q341 396 341 412Q341 428 324.5 437.0Q308 446 286 446Z","tx":54.52,"sx":62.37,"sy":1.66,"s":0.0488},{"d":"M162 80Q160 12 160 -31Q160 -88 165 -135Q167 -153 167 -160Q167 -176 160.0 -187.5Q153 -199 140 -199Q122 -199 120 -186Q119 -169 117.5 -133.5Q116 -98 116 -62L117 78Q112 78 98.5 77.0Q85 76 72 76Q48 76 48 109Q48 133 60 133Q64 133 84.0 127.0Q104 121 118 121L117 404Q109 405 84.0 407.5Q59 410 47.5 417.0Q36 424 36 437Q36 463 46 463Q57 463 73 455Q75 454 85.0 449.5Q95 445 113 443Q119 459 124.5 465.0Q130 471 146 471Q166 471 166 463Q166 460 163.0 452.5Q160 445 160 438Q222 429 300.5 401.5Q379 374 436.5 332.0Q494 290 494 240Q494 169 402.0 130.0Q310 91 162 80ZM158 400Q160 342 161.0 246.5Q162 151 162 120Q222 120 290.0 135.5Q358 151 404.5 177.5Q451 204 451 236Q451 278 403.0 312.0Q355 346 287.5 368.0Q220 390 158 400Z","tx":77.14,"sx":84.99,"sy":1.66,"s":0.0488},{"d":"M246 -33Q181 -33 143.0 -22.5Q105 -12 105 7Q105 17 119.5 40.5Q134 64 142 64Q154 64 154 59Q154 56 150.5 52.0Q147 48 147 44Q147 41 159.5 35.0Q172 29 198.0 24.0Q224 19 261 19Q320 19 364.5 42.0Q409 65 433.0 100.0Q457 135 457 168Q457 211 415.5 242.0Q374 273 282 301Q193 330 144.5 349.5Q96 369 66.0 397.5Q36 426 36 467Q36 522 98.0 575.5Q160 629 251.0 662.5Q342 696 420 696Q460 696 463 680Q466 664 466 644Q466 629 455 629Q450 629 443.5 632.5Q437 636 432 638Q426 640 418.0 642.0Q410 644 395 644Q343 644 270.0 617.0Q197 590 143.5 550.0Q90 510 90 473Q90 443 114.5 421.0Q139 399 180.0 383.5Q221 368 296 345Q406 313 458.5 273.0Q511 233 511 175Q511 125 477.5 76.5Q444 28 383.5 -2.5Q323 -33 246 -33Z","tx":102.55,"sx":110.4,"sy":1.66,"s":0.0488},{"d":"M436 240Q436 222 409.5 161.0Q383 100 329.5 48.0Q276 -4 198 -4Q134 -4 91.0 36.0Q48 76 48 159Q48 237 84.0 313.5Q120 390 178.0 438.5Q236 487 298 487Q335 487 360.5 470.5Q386 454 386 423Q386 388 346.5 355.0Q307 322 244.0 297.0Q181 272 114 261Q102 215 102 171Q102 113 129.5 81.0Q157 49 208 49Q285 49 333.0 104.0Q381 159 413 228Q415 232 420.0 243.5Q425 255 429 255Q436 255 436 240ZM286 446Q248 446 213.0 421.0Q178 396 154.5 361.0Q131 326 124 299Q170 304 221.0 325.0Q272 346 306.5 371.0Q341 396 341 412Q341 428 324.5 437.0Q308 446 286 446Z","tx":129.36,"sx":137.22,"sy":1.66,"s":0.0488},{"d":"M436 240Q436 222 409.5 161.0Q383 100 329.5 48.0Q276 -4 198 -4Q134 -4 91.0 36.0Q48 76 48 159Q48 237 84.0 313.5Q120 390 178.0 438.5Q236 487 298 487Q335 487 360.5 470.5Q386 454 386 423Q386 388 346.5 355.0Q307 322 244.0 297.0Q181 272 114 261Q102 215 102 171Q102 113 129.5 81.0Q157 49 208 49Q285 49 333.0 104.0Q381 159 413 228Q415 232 420.0 243.5Q425 255 429 255Q436 255 436 240ZM286 446Q248 446 213.0 421.0Q178 396 154.5 361.0Q131 326 124 299Q170 304 221.0 325.0Q272 346 306.5 371.0Q341 396 341 412Q341 428 324.5 437.0Q308 446 286 446Z","tx":151.99,"sx":159.84,"sy":1.66,"s":0.0488},{"d":"M467 386Q459 386 449.0 394.5Q439 403 435 403Q408 403 349.0 366.0Q290 329 228.0 279.0Q166 229 133 194L134 176Q210 141 303.0 101.0Q396 61 432 54Q446 52 460.0 51.0Q474 50 480 50Q489 50 495.0 49.0Q501 48 501 45Q501 33 482.5 21.0Q464 9 427 9Q394 9 337.5 33.5Q281 58 204 98L141 129Q154 2 154 -11Q154 -22 143.0 -29.0Q132 -36 119 -36Q111 -36 106.0 -12.0Q101 12 94 83L87 144Q75 149 66.0 158.5Q57 168 57 176Q57 188 77 204Q76 258 71.5 358.0Q67 458 65 504L60 643Q60 671 67.0 691.0Q74 711 98 711Q107 711 110.0 707.5Q113 704 113 694Q113 648 119.5 480.5Q126 313 130 242Q353 454 456 454Q477 454 491.5 446.5Q506 439 506 431Q506 417 492.5 401.5Q479 386 467 386Z","tx":174.62,"sx":182.47,"sy":1.66,"s":0.0488},{"d":"M604 249Q586 243 560.5 241.5Q535 240 527 240Q526 209 523.0 171.0Q520 133 518 108L515 77L513 45L507 -32Q503 -83 474 -83Q463 -83 452.5 -57.5Q442 -32 442 -16Q442 -12 450.0 0.0Q458 12 460 30Q464 58 469.0 123.0Q474 188 476 232Q437 229 392 223Q372 221 302.0 214.0Q232 207 192 205Q188 139 183.0 44.0Q178 -51 178 -72Q178 -80 180.5 -93.0Q183 -106 183 -113Q183 -122 169.5 -131.0Q156 -140 148 -140Q138 -140 131.5 -127.0Q125 -114 125 -97Q125 -88 127.0 -67.5Q129 -47 130 -32Q134 -5 135 12Q140 71 143.0 126.0Q146 181 147 200Q84 189 28 189Q9 189 -4.5 198.5Q-18 208 -18 226Q-18 239 -11.5 245.5Q-5 252 15 252L68 251Q120 249 152 249Q157 334 157 385Q157 501 155 593V630Q155 645 166.5 654.5Q178 664 193 664Q204 664 208.0 647.0Q212 630 212 609Q212 587 207 519Q201 403 201 396L196 253Q280 255 481 279Q485 308 495 431Q499 496 502 526L508 604Q521 751 521 788Q521 801 531.0 809.0Q541 817 554 817Q572 817 572 782Q572 760 562 665Q551 541 550 527Q544 450 538.5 380.0Q533 310 531 286Q549 289 563 295Q581 301 591 301Q601 301 614.0 289.0Q627 277 627 272Q627 256 604 249Z","tx":212.21,"sx":220.06,"sy":1.66,"s":0.0488},{"d":"M480 37Q480 25 470.0 9.5Q460 -6 450 -6Q433 -6 424.0 15.0Q415 36 415 64Q415 88 418 208L419 246Q419 269 407 279Q362 203 323.0 147.0Q284 91 224.0 41.5Q164 -8 98 -8Q66 -8 48.5 12.0Q31 32 31 64Q31 104 67.0 173.5Q103 243 159.0 314.5Q215 386 271 432Q308 462 330.0 472.5Q352 483 369 483Q385 483 402.0 473.0Q419 463 431.0 445.0Q443 427 443 404Q443 373 426 345L443 350Q454 350 456 323Q457 307 458.5 258.0Q460 209 461 177Q462 144 463.0 113.0Q464 82 465 64Q466 57 473.0 49.5Q480 42 480 37ZM393 318Q405 348 405 383Q405 404 392.5 419.5Q380 435 359 435Q334 435 295 401Q250 363 200.0 299.5Q150 236 117.0 174.0Q84 112 84 76Q84 46 112 46Q166 46 216.0 86.0Q266 126 305.5 181.5Q345 237 393 318Z","tx":245.56,"sx":253.41,"sy":1.66,"s":0.0488},{"d":"M360 389Q353 389 346.5 395.0Q340 401 332 412Q325 422 313.5 429.0Q302 436 290 436Q261 436 212.0 359.5Q163 283 116 167Q117 144 119.5 109.0Q122 74 123 57L126 17Q126 3 120.0 -7.5Q114 -18 98 -18Q81 -18 76.0 27.5Q71 73 70 160Q69 182 68.5 223.0Q68 264 66 321Q63 407 63 444Q63 467 91 467Q108 467 111.5 452.5Q115 438 115 397V238Q145 315 180.0 371.0Q215 427 248.5 456.5Q282 486 308 486Q330 486 350.0 476.0Q370 466 382.0 450.5Q394 435 394 421Q394 412 381.5 400.5Q369 389 360 389Z","tx":271.36,"sx":279.21,"sy":1.66,"s":0.0488},{"d":"M360 -36Q350 -36 343.0 -31.5Q336 -27 336 -19Q336 22 342 108Q348 200 348 261Q348 320 344.5 357.5Q341 395 328 395Q294 395 253.5 310.5Q213 226 161 88L146 48Q142 38 132.5 32.0Q123 26 113 26Q101 26 97.0 28.0Q93 30 92 40L84 122L69 266Q62 352 52 416Q49 431 49 439Q49 454 62.0 463.5Q75 473 92 473Q102 473 106.5 425.0Q111 377 116 270L120 217Q128 116 129 89Q132 95 134.5 102.5Q137 110 141 119Q195 259 242.5 352.5Q290 446 334 446Q365 446 376.5 393.5Q388 341 391 259Q394 168 394 -7Q394 -19 384.0 -27.5Q374 -36 360 -36Z","tx":291.55,"sx":299.4,"sy":1.66,"s":0.0488},{"d":"M436 240Q436 222 409.5 161.0Q383 100 329.5 48.0Q276 -4 198 -4Q134 -4 91.0 36.0Q48 76 48 159Q48 237 84.0 313.5Q120 390 178.0 438.5Q236 487 298 487Q335 487 360.5 470.5Q386 454 386 423Q386 388 346.5 355.0Q307 322 244.0 297.0Q181 272 114 261Q102 215 102 171Q102 113 129.5 81.0Q157 49 208 49Q285 49 333.0 104.0Q381 159 413 228Q415 232 420.0 243.5Q425 255 429 255Q436 255 436 240ZM286 446Q248 446 213.0 421.0Q178 396 154.5 361.0Q131 326 124 299Q170 304 221.0 325.0Q272 346 306.5 371.0Q341 396 341 412Q341 428 324.5 437.0Q308 446 286 446Z","tx":313.98,"sx":321.83,"sy":1.66,"s":0.0488},{"d":"M161 -34Q118 -34 103.0 -26.0Q88 -18 88 -4Q88 5 111.0 27.5Q134 50 142 50Q154 50 154 45Q154 41 149.0 37.0Q144 33 144 30Q144 26 156.5 22.0Q169 18 187 18Q229 18 271.5 33.5Q314 49 341.0 74.0Q368 99 368 127Q368 154 351.0 170.0Q334 186 308.5 193.5Q283 201 223 215Q157 230 120.5 241.5Q84 253 62.0 270.5Q40 288 40 315Q40 363 87.0 403.0Q134 443 195.0 466.0Q256 489 289 489Q323 489 323 469Q323 457 315.0 442.5Q307 428 291 428Q285 428 278.0 432.5Q271 437 264 437Q244 437 201.0 424.0Q158 411 123.0 385.0Q88 359 88 322Q88 298 115.5 286.5Q143 275 218 258Q227 255 236.0 253.5Q245 252 252 250Q329 232 370.0 209.0Q411 186 411 140Q411 96 375.5 55.5Q340 15 282.0 -9.5Q224 -34 161 -34Z","tx":336.6,"sx":344.45,"sy":1.66,"s":0.0488},{"d":"M161 -34Q118 -34 103.0 -26.0Q88 -18 88 -4Q88 5 111.0 27.5Q134 50 142 50Q154 50 154 45Q154 41 149.0 37.0Q144 33 144 30Q144 26 156.5 22.0Q169 18 187 18Q229 18 271.5 33.5Q314 49 341.0 74.0Q368 99 368 127Q368 154 351.0 170.0Q334 186 308.5 193.5Q283 201 223 215Q157 230 120.5 241.5Q84 253 62.0 270.5Q40 288 40 315Q40 363 87.0 403.0Q134 443 195.0 466.0Q256 489 289 489Q323 489 323 469Q323 457 315.0 442.5Q307 428 291 428Q285 428 278.0 432.5Q271 437 264 437Q244 437 201.0 424.0Q158 411 123.0 385.0Q88 359 88 322Q88 298 115.5 286.5Q143 275 218 258Q227 255 236.0 253.5Q245 252 252 250Q329 232 370.0 209.0Q411 186 411 140Q411 96 375.5 55.5Q340 15 282.0 -9.5Q224 -34 161 -34Z","tx":358.3,"sx":366.15,"sy":1.66,"s":0.0488}];
+  var WRITE_START = 320, DUR = 360, STAGGER = 285, T_LOGO = 4900;
+
+  // 跑马灯点阵依次起跑
+  var dots = document.querySelectorAll(".marquee i");
+  for (var i = 0; i < dots.length; i++) dots[i].style.animationDelay = (i * 0.075) + "s";
+
+  // 构建路径：每个字母 = 辉光底 + 亮白笔画 + 笔尖
+  var glowG = document.getElementById("glow");
+  var inkG = document.getElementById("ink");
+  var pensG = document.getElementById("pens");
+  var items = [];
+  for (var j = 0; j < GLYPHS.length; j++) {
+    var g = GLYPHS[j];
+    var glow = document.createElementNS(NS, "path");
+    glow.setAttribute("d", g.d);
+    glow.setAttribute("transform", "translate(" + g.tx + ",0) scale(" + g.s + "," + (-g.s) + ")");
+    glowG.appendChild(glow);
+    var ink = document.createElementNS(NS, "path");
+    ink.setAttribute("d", g.d);
+    ink.setAttribute("transform", "translate(" + g.tx + ",0) scale(" + g.s + "," + (-g.s) + ")");
+    inkG.appendChild(ink);
+    var halo = document.createElementNS(NS, "circle");
+    halo.setAttribute("r", 5.5); halo.setAttribute("class", "pen-halo");
+    var pen = document.createElementNS(NS, "circle");
+    pen.setAttribute("r", 2.4); pen.setAttribute("class", "pen");
+    pensG.appendChild(halo); pensG.appendChild(pen);
+    items.push({ ink: ink, glow: glow, halo: halo, pen: pen, sx: g.sx, sy: g.sy, L: 0, start: WRITE_START + j * STAGGER });
+  }
+
+  // 量取每条路径长度，初始化虚线偏移
+  for (var k = 0; k < items.length; k++) {
+    var it = items[k];
+    it.L = it.ink.getTotalLength();
+    it.ink.style.strokeDasharray = it.L + " " + it.L;
+    it.ink.style.strokeDashoffset = it.L;
+    it.glow.style.strokeDasharray = it.L + " " + it.L;
+    it.glow.style.strokeDashoffset = it.L;
+  }
+
+  var t0 = null;
+  function frame(ts) {
+    if (t0 === null) t0 = ts;
+    var now = ts - t0;
+    var allDone = true;
+    for (var m = 0; m < items.length; m++) {
+      var p = items[m];
+      var t = (now - p.start) / DUR;
+      if (t < 0) { allDone = false; continue; }
+      if (t < 1) {
+        allDone = false;
+        var e = 1 - Math.pow(1 - t, 3); // easeOutCubic，起笔快、收笔稳
+        p.ink.style.strokeDashoffset = p.L * (1 - e);
+        p.glow.style.strokeDashoffset = p.L * (1 - e);
+        var pt = p.ink.getPointAtLength(p.L * e);
+        p.pen.setAttribute("cx", pt.x); p.pen.setAttribute("cy", pt.y);
+        p.halo.setAttribute("cx", pt.x); p.halo.setAttribute("cy", pt.y);
+        p.pen.style.opacity = 1; p.halo.style.opacity = 1;
+      } else if (!p.done) {
+        p.done = true;
+        p.ink.style.strokeDashoffset = 0;
+        p.glow.style.strokeDashoffset = 0;
+        p.ink.classList.add("done");
+        p.pen.style.opacity = 0; p.halo.style.opacity = 0;
+      }
+    }
+    if (now > T_LOGO) {
+      document.getElementById("logo").classList.add("on");
+      document.getElementById("underline").classList.add("on");
+      document.getElementById("marquee").classList.add("dim");
+    }
+    if (!allDone || now < T_LOGO + 600) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  try {
+    var v = new URLSearchParams(location.search).get("version");
+    if (v) document.getElementById("ver").textContent = "v" + v;
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

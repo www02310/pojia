@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>splash overlay harness</title>
+<style>html,body{margin:0;height:100%;background:#101418;color:#c9d2e3;font:14px system-ui}</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  // 模拟 DSH 宿主注入的全局元数据
+  window.__DSH_SPLASH_META__ = {
+    enabled: true,
+    version: '0.2.1-rc.2',
+    pluginVersion: '1.0.0',
+    config: { enabled: true, oncePerSession: false, clickToSkip: false, skipIfNative: false }
+  }
+</script>
+<script src="/assets/splash-overlay.js"></script>
+<script>
+  // 模拟 React 延迟挂载：触发 overlay 的「窗口即将可见」判定
+  setTimeout(function () {
+    document.getElementById('root').innerHTML =
+      '<div style="padding:48px"><h1>app root mounted</h1><p>如果覆盖层已正确淡出，就能看到这行字。</p></div>'
+  }, 300)
+</script>
+</body>
+</html>
