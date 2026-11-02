@@ -38,7 +38,9 @@ rc.5 更不行，而且官方的自动更新 **会把你从 rc.2 推到 rc.5**�
 pojia/
 ├── installer/
 │   └── deepseek-harness-0.2.1-rc.2-win-x64.exe   # 官方安装包 289MB（Git LFS）
-├── dsh-purge/                 # 插件源码 v1.1.88（fork 自 YuJunZhiXue/dsh-purge，MIT）
+├── dsh-purge/                 # 【推荐】插件源码 v1.1.88（fork 自 YuJunZhiXue/dsh-purge，MIT）
+├── versions/
+│   └── dsh-purge-1.1.71/      # 【备选】插件源码 v1.1.71，同款目录结构，可单独下载
 ├── profile/
 │   └── desktop-package.json   # 实测可用的 profile 配置（插件版本 + bundle 顺序）
 ├── scripts/
@@ -47,6 +49,24 @@ pojia/
 └── docs/
     └── SETUP.md               # 完整安装步骤 + 踩坑记录
 ```
+
+### 两个插件版本怎么选
+
+| | v1.1.88（`dsh-purge/`） | v1.1.71（`versions/dsh-purge-1.1.71/`） |
+|---|---|---|
+| 补丁总数 | 85 | 82 |
+| 在 rc.2 上能匹配 | **63** | 59 |
+| `core.js` 行数 | 8765 | 7984 |
+| 对 rc.2 适配 | 完整（1.1.81 起专门适配） | 面向 0.2.0 档，缺 rc.2 修复 |
+| 建议 | **用这个** | 仅作备份对照 |
+
+v1.1.71 的 82 条补丁**全部包含**在 v1.1.88 里，没有被删除，是纯增量。
+但 1.1.72–1.1.80 修了一批 rc.2 专属问题：`{{cwd}}`/`[cwd]` 导致整轮失败、补丁 #40 命中、
+`toolFilter` 废弃兼容、`dsh-tools` 解析、`hostFs` 文件句柄、**桌面换包自杀**、`file:` 归档更新、
+Ctrl+Enter 插话。所以除非有明确理由，否则别降级。
+
+两个目录结构完全一致，互斥使用——把要用的那个复制成 `%USERPROFILE%\.dsh\plugins\dsh-purge`
+（文件夹名必须是 `dsh-purge`），别同时放。
 
 ---
 
