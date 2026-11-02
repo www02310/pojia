@@ -1,0 +1,27 @@
+{
+  "name": "dsh-profile-desktop",
+  "private": true,
+  "dependencies": {
+    "@michengai/dsh-code-review": "1.0.5",
+    "@michengai/dsh-codex-ui": "2.0.11",
+    "@michengai/dsh-skills-manager": "1.2.26",
+    "@wxg-prc-cpg/browser-skill-dsh-plugin": "0.4.1",
+    "dsh-purge": "file:../../plugins/dsh-purge",
+    "dsh-whale-widget": "0.4.2",
+    "dshmarket": "1.73.8"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "@wxg-prc-cpg/browser-skill-dsh-plugin",
+        "dsh-whale-widget",
+        "dshmarket",
+        "@michengai/dsh-code-review",
+        "@michengai/dsh-skills-manager",
+        "dsh-purge"
+      ]
+    }
+  }
+}
